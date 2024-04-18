@@ -413,7 +413,7 @@ class SemanticIPAdapterXL(IPAdapter):
                 editing_prompt=editing_prompt
             )
             print("prompt_embeds", prompt_embeds.shape)
-            edit_concepts_embeds = torch.cat([edit_concepts_embeds, image_prompt_embeds], dim=1)
+            edit_concepts_embeds = torch.cat([edit_concepts_embeds, image_prompt_embeds * 0], dim=1)
             prompt_embeds = torch.cat([prompt_embeds, image_prompt_embeds], dim=1)
             negative_prompt_embeds = torch.cat([negative_prompt_embeds, uncond_image_prompt_embeds], dim=1)
 
@@ -429,6 +429,122 @@ class SemanticIPAdapterXL(IPAdapter):
             # editing_prompt = editing_prompt,
             editing_prompt_embeddings=edit_concepts_embeds,
             editing_pooled_prompt_embeds=edit_pooled_prompt_embeds,
+            reverse_editing_direction=reverse_editing_direction,
+            edit_guidance_scale=edit_guidance_scale,
+            edit_warmup_steps=edit_warmup_steps,
+            edit_cooldown_steps=edit_cooldown_steps,
+            edit_threshold=edit_threshold,
+            edit_momentum_scale=edit_momentum_scale,
+            edit_mom_beta=edit_mom_beta,
+            edit_weights=edit_weights,
+            sem_guidance=sem_guidance
+        ).images
+
+        return images
+
+
+class LeditsPpIPAdapterXL(IPAdapter):
+    """SDXL"""
+
+    def generate(
+            self,
+            pil_image,
+            prompt=None,
+            negative_prompt=None,
+            scale=1.0,
+            num_samples=4,
+            seed=None,
+            num_inference_steps=30,
+            neg_content_emb=None,
+            neg_content_prompt=None,
+            neg_content_scale=1.0,
+            editing_prompt: Optional[Union[str, List[str]]] = None,
+            editing_prompt_embeddings: Optional[torch.Tensor] = None,
+            editing_pooled_prompt_embeds: Optional[torch.Tensor] = None,
+            reverse_editing_direction: Optional[Union[bool, List[bool]]] = False,
+            edit_guidance_scale: Optional[Union[float, List[float]]] = 5,
+            edit_warmup_steps: Optional[Union[int, List[int]]] = 10,
+            edit_cooldown_steps: Optional[Union[int, List[int]]] = None,
+            edit_threshold: Optional[Union[float, List[float]]] = 0.9,
+            edit_momentum_scale: Optional[float] = 0.1,
+            edit_mom_beta: Optional[float] = 0.4,
+            edit_weights: Optional[List[float]] = None,
+            sem_guidance: Optional[List[torch.Tensor]] = None
+    ):
+        self.set_scale(scale)
+
+        num_prompts = 1 if isinstance(pil_image, Image.Image) else len(pil_image)
+
+        if prompt is None:
+            prompt = "best quality, high quality"
+        if negative_prompt is None:
+            negative_prompt = "monochrome, lowres, bad anatomy, worst quality, low quality"
+
+        if not isinstance(prompt, List):
+            prompt = [prompt] * num_prompts
+        if not isinstance(negative_prompt, List):
+            negative_prompt = [negative_prompt] * num_prompts
+
+        if neg_content_emb is None:
+            if neg_content_prompt is not None:
+                with torch.inference_mode():
+                    (
+                        prompt_embeds_,  # torch.Size([1, 77, 2048])
+                        negative_prompt_embeds_,
+                        pooled_prompt_embeds_,  # torch.Size([1, 1280])
+                        negative_pooled_prompt_embeds_,
+                    ) = self.pipe.encode_prompt(
+                        neg_content_prompt,
+                        num_images_per_prompt=num_samples,
+                        do_classifier_free_guidance=True,
+                        negative_prompt=negative_prompt,
+                    )
+                    pooled_prompt_embeds_ *= neg_content_scale
+            else:
+                pooled_prompt_embeds_ = neg_content_emb
+        else:
+            pooled_prompt_embeds_ = None
+
+        image_prompt_embeds, uncond_image_prompt_embeds = self.get_image_embeds(pil_image,
+                                                                                content_prompt_embeds=pooled_prompt_embeds_)
+        print("image_prompt_embeds", image_prompt_embeds.shape)
+        bs_embed, seq_len, _ = image_prompt_embeds.shape
+        image_prompt_embeds = image_prompt_embeds.repeat(1, num_samples, 1)
+        image_prompt_embeds = image_prompt_embeds.view(bs_embed * num_samples, seq_len, -1)
+        uncond_image_prompt_embeds = uncond_image_prompt_embeds.repeat(1, num_samples, 1)
+        uncond_image_prompt_embeds = uncond_image_prompt_embeds.view(bs_embed * num_samples, seq_len, -1)
+
+        with torch.inference_mode():
+            (
+                negative_prompt_embeds,
+                edit_concepts_embeds,
+                negative_pooled_prompt_embeds,
+                editing_pooled_prompt_embeds,
+                num_edit_tokens
+            ) = self.pipe.encode_prompt(
+                # prompt,
+                num_images_per_prompt=num_samples,
+                # do_classifier_free_guidance=True,
+                negative_prompt=negative_prompt,
+                editing_prompt=editing_prompt
+            )
+            # print("prompt_embeds", prompt_embeds.shape)
+            edit_concepts_embeds = torch.cat([edit_concepts_embeds, image_prompt_embeds], dim=1)
+            # prompt_embeds = torch.cat([prompt_embeds, image_prompt_embeds], dim=1)
+            negative_prompt_embeds = torch.cat([negative_prompt_embeds, uncond_image_prompt_embeds], dim=1)
+
+        self.generator = get_generator(seed, self.device)
+
+        images = self.pipe(
+            # prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=negative_prompt_embeds,
+            # pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+            num_inference_steps=num_inference_steps,
+            generator=self.generator,
+            # editing_prompt = editing_prompt,
+            editing_prompt_embeddings=edit_concepts_embeds,
+            editing_pooled_prompt_embeds=editing_pooled_prompt_embeds,
             reverse_editing_direction=reverse_editing_direction,
             edit_guidance_scale=edit_guidance_scale,
             edit_warmup_steps=edit_warmup_steps,
