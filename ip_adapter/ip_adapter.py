@@ -451,6 +451,7 @@ class LeditsPpIPAdapterXL(IPAdapter):
     def invert(
             self,
             image: PipelineImageInput,
+            style_ref_image: PipelineImageInput,
             source_prompt: str = "",
             source_guidance_scale=3.5,
             negative_prompt: str = None,
@@ -465,7 +466,7 @@ class LeditsPpIPAdapterXL(IPAdapter):
     ):
         self.set_scale(scale)
 
-        image_prompt_embeds, uncond_image_prompt_embeds = self.get_image_embeds(pil_image,
+        image_prompt_embeds, uncond_image_prompt_embeds = self.get_image_embeds(style_ref_image,
                                                                                 content_prompt_embeds=None)
 
         bs_embed, seq_len, _ = image_prompt_embeds.shape
@@ -482,28 +483,30 @@ class LeditsPpIPAdapterXL(IPAdapter):
                 editing_pooled_prompt_embeds,
                 num_edit_tokens
             ) = self.pipe.encode_prompt(
-                # prompt,
                 num_images_per_prompt=1,
-                # do_classifier_free_guidance=True,
                 negative_prompt=negative_prompt,
                 editing_prompt=source_prompt
             )
-            # print("prompt_embeds", prompt_embeds.shape)
+        # print("prompt_embeds", prompt_embeds.shape)
         edit_concepts_embeds = torch.cat([edit_concepts_embeds, image_prompt_embeds], dim=1)
-            # prompt_embeds = torch.cat([prompt_embeds, image_prompt_embeds], dim=1)
+        # prompt_embeds = torch.cat([prompt_embeds, image_prompt_embeds], dim=1)
         negative_prompt_embeds = torch.cat([negative_prompt_embeds, uncond_image_prompt_embeds], dim=1)
 
-        _ = self.pipe.invert(
+        reconstruction = self.pipe.invert(
             image=image,
+            source_guidance_scale=source_guidance_scale,
             skip=skip,
+            negative_prompt_2=negative_prompt_2,
             negative_prompt_embeds=negative_prompt_embeds,
             # pooled_prompt_embeds=pooled_prompt_embeds,
             negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             num_inversion_steps=num_inversion_steps,
-            generator=self.generator,
+            generator= generator,
             # editing_prompt = editing_prompt,
             editing_prompt_embeddings=edit_concepts_embeds,
             editing_pooled_prompt_embeds=editing_pooled_prompt_embeds,)
+
+        return reconstruction
 
 
 

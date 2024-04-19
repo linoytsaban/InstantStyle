@@ -419,6 +419,7 @@ class LEditsPPPipelineStableDiffusionXL(
         editing_prompt: Optional[str] = None,
         edit_concepts_embeds: Optional[torch.FloatTensor] = None,
         editing_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        batch_size: Optional[int] =1,
     ) -> object:
         r"""
         Encodes the prompt into text encoder hidden states.
@@ -481,7 +482,10 @@ class LEditsPPPipelineStableDiffusionXL(
                 else:
                     scale_lora_layers(self.text_encoder_2, lora_scale)
 
-        batch_size = self.batch_size
+        if not self.batch_size:
+            batch_size = 1
+        else:
+            batch_size = self.batch_size
 
         # Define tokenizers and text encoders
         tokenizers = [self.tokenizer, self.tokenizer_2] if self.tokenizer is not None else [self.tokenizer_2]
