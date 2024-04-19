@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import torch
 from diffusers import StableDiffusionPipeline
 from diffusers.pipelines.controlnet import MultiControlNetModel
+from diffusers.image_processor import PipelineImageInput
 from PIL import Image
 from safetensors import safe_open
 from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
@@ -445,6 +446,67 @@ class SemanticIPAdapterXL(IPAdapter):
 
 class LeditsPpIPAdapterXL(IPAdapter):
     """SDXL"""
+
+    @torch.no_grad()
+    def invert(
+            self,
+            image: PipelineImageInput,
+            source_prompt: str = "",
+            source_guidance_scale=3.5,
+            negative_prompt: str = None,
+            negative_prompt_2: str = None,
+            num_inversion_steps: int = 50,
+            skip: float = 0.15,
+            generator: Optional[torch.Generator] = None,
+            crops_coords_top_left: Tuple[int, int] = (0, 0),
+            num_zero_noise_steps: int = 3,
+            cross_attention_kwargs: Optional[Dict[str, Any]] = None,
+            scale=1.0,
+    ):
+        self.set_scale(scale)
+
+        image_prompt_embeds, uncond_image_prompt_embeds = self.get_image_embeds(pil_image,
+                                                                                content_prompt_embeds=None)
+
+        bs_embed, seq_len, _ = image_prompt_embeds.shape
+        image_prompt_embeds = image_prompt_embeds.repeat(1, 1, 1)
+        image_prompt_embeds = image_prompt_embeds.view(bs_embed, seq_len, -1)
+        uncond_image_prompt_embeds = uncond_image_prompt_embeds.repeat(1, 1, 1)
+        uncond_image_prompt_embeds = uncond_image_prompt_embeds.view(bs_embed, seq_len, -1)
+
+        with torch.inference_mode():
+            (
+                negative_prompt_embeds,
+                edit_concepts_embeds,
+                negative_pooled_prompt_embeds,
+                editing_pooled_prompt_embeds,
+                num_edit_tokens
+            ) = self.pipe.encode_prompt(
+                # prompt,
+                num_images_per_prompt=1,
+                # do_classifier_free_guidance=True,
+                negative_prompt=negative_prompt,
+                editing_prompt=source_prompt
+            )
+            # print("prompt_embeds", prompt_embeds.shape)
+        edit_concepts_embeds = torch.cat([edit_concepts_embeds, image_prompt_embeds], dim=1)
+            # prompt_embeds = torch.cat([prompt_embeds, image_prompt_embeds], dim=1)
+        negative_prompt_embeds = torch.cat([negative_prompt_embeds, uncond_image_prompt_embeds], dim=1)
+
+        _ = self.pipe.invert(
+            image=image,
+            skip=skip,
+            negative_prompt_embeds=negative_prompt_embeds,
+            # pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+            num_inversion_steps=num_inversion_steps,
+            generator=self.generator,
+            # editing_prompt = editing_prompt,
+            editing_prompt_embeddings=edit_concepts_embeds,
+            editing_pooled_prompt_embeds=editing_pooled_prompt_embeds,)
+
+
+
 
     def generate(
             self,
