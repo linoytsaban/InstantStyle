@@ -335,6 +335,7 @@ class SemanticIPAdapterXL(IPAdapter):
     def generate(
             self,
             pil_image,
+            merge=None,
             prompt=None,
             negative_prompt=None,
             scale=1.0,
@@ -394,6 +395,12 @@ class SemanticIPAdapterXL(IPAdapter):
         image_prompt_embeds, uncond_image_prompt_embeds = self.get_image_embeds(pil_image,
                                                                                 content_prompt_embeds=pooled_prompt_embeds_)
         print("image_prompt_embeds", image_prompt_embeds.shape)
+        if merge:
+            image_prompt_embeds2, uncond_image_prompt_embeds2 = self.get_image_embeds(merge,
+                                                                                    content_prompt_embeds=pooled_prompt_embeds_)
+            image_prompt_embeds = torch.cat([image_prompt_embeds,image_prompt_embeds2], dim=1)
+            uncond_image_prompt_embeds = torch.cat([uncond_image_prompt_embeds2, uncond_image_prompt_embeds2], dim=1)
+            print("image_prompt_embeds", image_prompt_embeds.shape)
         bs_embed, seq_len, _ = image_prompt_embeds.shape
         image_prompt_embeds = image_prompt_embeds.repeat(1, num_samples, 1)
         image_prompt_embeds = image_prompt_embeds.view(bs_embed * num_samples, seq_len, -1)
@@ -415,6 +422,7 @@ class SemanticIPAdapterXL(IPAdapter):
             )
             print("prompt_embeds", prompt_embeds.shape)
             edit_concepts_embeds = torch.cat([edit_concepts_embeds, image_prompt_embeds * 0], dim=1)
+            print("prompt_embeds", edit_concepts_embeds.shape)
             prompt_embeds = torch.cat([prompt_embeds, image_prompt_embeds], dim=1)
             negative_prompt_embeds = torch.cat([negative_prompt_embeds, uncond_image_prompt_embeds], dim=1)
 
