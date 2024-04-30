@@ -501,12 +501,26 @@ class StableDiffusionXLInstantIDImg2ImgPipeline(StableDiffusionXLControlNetImg2I
             if cross_attention_dim is None:
                 attn_procs[name] = AttnProcessor().to(unet.device, dtype=unet.dtype)
             else:
-                attn_procs[name] = IPAttnProcessor(
-                    hidden_size=hidden_size,
-                    cross_attention_dim=cross_attention_dim,
-                    scale=scale,
-                    num_tokens=num_tokens,
-                ).to(unet.device, dtype=unet.dtype)
+                selected = False
+                for block_name in self.target_blocks:
+                    if block_name in name:
+                        selected = True
+                        break
+                if selected:
+                    attn_procs[name] = IPAttnProcessor(
+                        hidden_size=hidden_size,
+                        cross_attention_dim=cross_attention_dim,
+                        scale=scale,
+                        num_tokens=num_tokens,
+                    ).to(unet.device, dtype=unet.dtype)
+                else:
+                    attn_procs[name] = IPAttnProcessor(
+                        hidden_size=hidden_size,
+                        cross_attention_dim=cross_attention_dim,
+                        scale=scale,
+                        num_tokens=num_tokens,
+                        skip=True
+                    ).to(self.device, dtype=unet.dtype)
         unet.set_attn_processor(attn_procs)
 
         state_dict = torch.load(model_ckpt, map_location="cpu")
