@@ -499,11 +499,9 @@ class LeditsPpIPAdapterXL(IPAdapter):
             skip=skip,
             negative_prompt_2=negative_prompt_2,
             negative_prompt_embeds=negative_prompt_embeds,
-            # pooled_prompt_embeds=pooled_prompt_embeds,
             negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             num_inversion_steps=num_inversion_steps,
             generator= generator,
-            # editing_prompt = editing_prompt,
             editing_prompt_embeddings=edit_concepts_embeds,
             editing_pooled_prompt_embeds=editing_pooled_prompt_embeds,)
 
@@ -588,9 +586,7 @@ class LeditsPpIPAdapterXL(IPAdapter):
                 editing_pooled_prompt_embeds,
                 num_edit_tokens
             ) = self.pipe.encode_prompt(
-                # prompt,
                 num_images_per_prompt=num_samples,
-                # do_classifier_free_guidance=True,
                 negative_prompt=negative_prompt,
                 editing_prompt=editing_prompt
             )
@@ -602,13 +598,10 @@ class LeditsPpIPAdapterXL(IPAdapter):
         self.generator = get_generator(seed, self.device)
 
         images = self.pipe(
-            # prompt_embeds=prompt_embeds,
             negative_prompt_embeds=negative_prompt_embeds,
-            # pooled_prompt_embeds=pooled_prompt_embeds,
             negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             num_inference_steps=num_inference_steps,
             generator=self.generator,
-            # editing_prompt = editing_prompt,
             editing_prompt_embeddings=edit_concepts_embeds,
             editing_pooled_prompt_embeds=editing_pooled_prompt_embeds,
             reverse_editing_direction=reverse_editing_direction,
