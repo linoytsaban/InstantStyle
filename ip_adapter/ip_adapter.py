@@ -507,9 +507,6 @@ class LeditsPpIPAdapterXL(IPAdapter):
 
         return reconstruction
 
-
-
-
     def generate(
             self,
             pil_image,
@@ -553,14 +550,16 @@ class LeditsPpIPAdapterXL(IPAdapter):
             if neg_content_prompt is not None:
                 with torch.inference_mode():
                     (
-                        prompt_embeds_,  # torch.Size([1, 77, 2048])
+                        # torch.Size([1, 77, 2048])
                         negative_prompt_embeds_,
-                        pooled_prompt_embeds_,  # torch.Size([1, 1280])
+                        prompt_embeds_,
                         negative_pooled_prompt_embeds_,
+                        pooled_prompt_embeds_,  # torch.Size([1, 1280])
+                        num_edit_tokens
                     ) = self.pipe.encode_prompt(
-                        neg_content_prompt,
+                        editing_prompt=neg_content_prompt,
                         num_images_per_prompt=num_samples,
-                        do_classifier_free_guidance=True,
+                        # do_classifier_free_guidance=True,
                         negative_prompt=negative_prompt,
                     )
                     pooled_prompt_embeds_ *= neg_content_scale

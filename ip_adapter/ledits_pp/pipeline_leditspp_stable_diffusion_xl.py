@@ -482,10 +482,10 @@ class LEditsPPPipelineStableDiffusionXL(
                 else:
                     scale_lora_layers(self.text_encoder_2, lora_scale)
 
-        if not self.batch_size:
-            batch_size = 1
-        else:
+        try:
             batch_size = self.batch_size
+        except:
+            batch_size = 1
 
         # Define tokenizers and text encoders
         tokenizers = [self.tokenizer, self.tokenizer_2] if self.tokenizer is not None else [self.tokenizer_2]
@@ -1581,21 +1581,21 @@ class LEditsPPPipelineStableDiffusionXL(
         add_time_ids = add_time_ids.to(device).repeat(self.batch_size * num_images_per_prompt, 1)
 
         # autoencoder reconstruction
-        if self.vae.dtype == torch.float16 and self.vae.config.force_upcast:
-            self.upcast_vae()
-            x0_tmp = x0.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
-            image_rec = self.vae.decode(
-                x0_tmp / self.vae.config.scaling_factor, return_dict=False, generator=generator
-            )[0]
-        elif self.vae.config.force_upcast:
-            x0_tmp = x0.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
-            image_rec = self.vae.decode(
-                x0_tmp / self.vae.config.scaling_factor, return_dict=False, generator=generator
-            )[0]
-        else:
-            image_rec = self.vae.decode(x0 / self.vae.config.scaling_factor, return_dict=False, generator=generator)[0]
+#         if self.vae.dtype == torch.float16 and self.vae.config.force_upcast:
+#             self.upcast_vae()
+#             x0_tmp = x0.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
+#             image_rec = self.vae.decode(
+#                 x0_tmp / self.vae.config.scaling_factor, return_dict=False, generator=generator
+#             )[0]
+#         elif self.vae.config.force_upcast:
+#             x0_tmp = x0.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
+#             image_rec = self.vae.decode(
+#                 x0_tmp / self.vae.config.scaling_factor, return_dict=False, generator=generator
+#             )[0]
+#         else:
+#             image_rec = self.vae.decode(x0 / self.vae.config.scaling_factor, return_dict=False, generator=generator)[0]
 
-        image_rec = self.image_processor.postprocess(image_rec, output_type="pil")
+#         image_rec = self.image_processor.postprocess(image_rec, output_type="pil")
 
         # 5. find zs and xts
         variance_noise_shape = (num_inversion_steps, *x0.shape)
@@ -1653,7 +1653,7 @@ class LEditsPPPipelineStableDiffusionXL(
         if num_zero_noise_steps > 0:
             zs[-num_zero_noise_steps:] = torch.zeros_like(zs[-num_zero_noise_steps:])
         self.zs = zs
-        return LEditsPPInversionPipelineOutput(images=resized, vae_reconstruction_images=image_rec)
+        # return LEditsPPInversionPipelineOutput(images=resized, vae_reconstruction_images=image_rec)
 
 
 # Copied from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl.rescale_noise_cfg
