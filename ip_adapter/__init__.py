@@ -1,4 +1,4 @@
-from .ip_adapter import IPAdapter, IPAdapterPlus, IPAdapterPlusXL, IPAdapterXL, IPAdapterFull
+from .ip_adapter import IPAdapter, IPAdapterPlus, IPAdapterPlusXL, IPAdapterXL, IPAdapterFull, SemanticIPAdapterXL, LeditsPpIPAdapterXL
 
 __all__ = [
     "IPAdapter",
@@ -6,4 +6,6 @@ __all__ = [
     "IPAdapterPlusXL",
     "IPAdapterXL",
     "IPAdapterFull",
+    "SemanticIPAdapterXL",
+    "LeditsPpIPAdapterXL"
 ]
