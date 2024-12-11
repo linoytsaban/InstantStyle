@@ -10,7 +10,7 @@ InstantX Team
 <a href='https://instantstyle.github.io/'><img src='https://img.shields.io/badge/Project-Page-green'></a>
 <a href='https://arxiv.org/abs/2404.02733'><img src='https://img.shields.io/badge/Technique-Report-red'></a>
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-red)](https://huggingface.co/spaces/InstantX/InstantStyle)
-[![ModelScope](https://img.shields.io/badge/ModelScope-Studios-blue)](https://modelscope.cn/studios/instantx/InstantID/summary)
+[![ModelScope](https://img.shields.io/badge/ModelScope-Studios-blue)](https://modelscope.cn/studios/instantx/InstantStyle/summary)
 [![GitHub](https://img.shields.io/github/stars/InstantStyle/InstantStyle?style=social)](https://github.com/InstantStyle/InstantStyle)
 
 </div>
@@ -37,6 +37,8 @@ Injecting into Style Blocks Only. Empirically, each layer of a deep network capt
 </p>
 
 ## Release
+- [2024/07/06] 🔥 We release [CSGO](https://github.com/instantX-research/CSGO) page for content-style composition. Code will be released soon.
+- [2024/07/01] 🔥 We release [InstantStyle-Plus](https://instantstyle-plus.github.io/) report for content preserving.
 - [2024/04/29] 🔥 We support InstantStyle natively in diffusers, usage can be found [here](https://github.com/InstantStyle/InstantStyle?tab=readme-ov-file#use-in-diffusers)
 - [2024/04/24] 🔥 InstantStyle for fast generation, find demos at [InstantStyle-SDXL-Lightning](https://huggingface.co/spaces/radames/InstantStyle-SDXL-Lightning) and [InstantStyle-Hyper-SDXL](https://huggingface.co/spaces/radames/InstantStyle-Hyper-SDXL).
 - [2024/04/24] 🔥 We support [HiDiffusion](https://github.com/megvii-research/HiDiffusion) for generating highres images, find more information [here](https://github.com/InstantStyle/InstantStyle/tree/main?tab=readme-ov-file#high-resolution-generation).
@@ -140,7 +142,7 @@ images[0].save("result.png")
 ```
 
 ## Use in diffusers
-InstantStyle has already been integrated into [diffusers](https://huggingface.co/docs/diffusers/main/en/using-diffusers/ip_adapter#style--layout-control) with a way more less complicate usage. You can granularly control per-transformer behavior of each IP-Adapter with ```set_ip_adapter_scale()``` method with a configure dictionary as shown below:
+InstantStyle has already been integrated into [diffusers](https://huggingface.co/docs/diffusers/main/en/using-diffusers/ip_adapter#style--layout-control) (please make sure that you have installed diffusers>=0.28.0.dev0), making the usage significantly simpler. You can now control the per-transformer behavior of each IP-Adapter with the set_ip_adapter_scale() method, using a configuration dictionary as shown below:
 
 ```python
 from diffusers import StableDiffusionXLPipeline
@@ -219,9 +221,12 @@ scale_1 = {
 # configure the second one for precise style control to each masked input.
 pipe.set_ip_adapter_scale([1.0, scale_1])
 
+processor = IPAdapterMaskProcessor()
 female_mask = Image.open("./assets/female_mask.png")
 male_mask = Image.open("./assets/male_mask.png")
 background_mask = Image.open("./assets/background_mask.png")
+composition_mask = Image.open("./assets/composition_mask.png")
+mask1 = processor.preprocess([composition_mask], height=1024, width=1024)
 mask2 = processor.preprocess([female_mask, male_mask, background_mask], height=1024, width=1024)
 mask2 = mask2.reshape(1, mask2.shape[0], mask2.shape[2], mask2.shape[3])   # output -> (1, 3, 1024, 1024)
 
@@ -315,6 +320,13 @@ InstantStyle is developed by the InstantX team and is highly built on [IP-Adapte
 If you find InstantStyle useful for your research and applications, please cite us using this BibTeX:
 
 ```bibtex
+@article{wang2024instantstyle,
+  title={InstantStyle-Plus: Style Transfer with Content-Preserving in Text-to-Image Generation},
+  author={Wang, Haofan and Xing, Peng and Huang, Renyuan and Ai, Hao and Wang, Qixun and Bai, Xu},
+  journal={arXiv preprint arXiv:2407.00788},
+  year={2024}
+}
+
 @article{wang2024instantstyle,
   title={InstantStyle: Free Lunch towards Style-Preserving in Text-to-Image Generation},
   author={Wang, Haofan and Wang, Qixun and Bai, Xu and Qin, Zekui and Chen, Anthony},
